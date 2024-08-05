@@ -1,0 +1,222 @@
+{{ block title }}
+{{ endblock }}
+
+{{ block content }}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-5 not-selectable">
+            <h3>{{ title }}</h3><br/>
+            <p>{{ the_note }}</p>
+            <br/><br/>
+            {{ formfields }}
+            <br/><br/>
+            <div>{{ next_button }}</div>
+        </div>
+        <div class="col-md-7">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h2>DP Skincare</h2>
+                    <p>You are chatting with our <b>Product Recommendation Chatbot</b>.</p>
+                </div>
+                <div id="msgs" class="chat-messages">
+                </div>
+                <div class="chat-input">
+                    <textarea class="form-control" id="next_msg" rows="1" onkeydown="handleKeyDown(event)"></textarea>
+                    <button type="button" class="btn btn-primary" id="send" onclick="send_msg()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loading"></div>
+
+<script>
+    var btn, msgs;
+
+    $(document).ready(function () {
+        btn = document.getElementById("send");
+        msgs = document.getElementById("msgs");
+    });
+
+    function wait() {
+        btn.disabled = true;
+        document.getElementById("loading").style.display = "block";
+    }
+
+    function unwait() {
+        btn.disabled = false;
+        document.getElementById("loading").style.display = "none";
+    }
+
+    function handleKeyDown(event) {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            send_msg();
+        }
+    }
+
+    function send_msg() {
+        if (btn.disabled) {
+            return;
+        }
+
+        var msg = document.getElementById("next_msg").value.trim();
+        if (msg !== "") {
+            console.log("Sending message:", msg); // Debug log
+            add_msg("user", msg);
+            liveSend(msg);
+            document.getElementById("next_msg").value = "";
+            wait();
+        }
+    }
+
+    function to_html(s) {
+        var escaped = s.replace(/&/g, "&amp;")
+                       .replace(/</g, "&lt;")
+                       .replace(/>/g, "&gt;")
+                       .replace(/"/g, "&quot;")
+                       .replace(/'/g, "&#039;");
+        var converted = escaped.replace(/\n/g, '<br>');
+        return converted;
+    }
+
+    function add_msg(role, msg) {
+        var newp = document.createElement("div");
+        newp.classList.add("msg");
+        newp.classList.add(role);
+        newp.innerHTML = "<p class='msg-content'>" + to_html(msg) + "</p>";
+        msgs.appendChild(newp);
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function liveSend(message) {
+        fetch('/send-message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text: message })
+        })
+        .then(response => response.json())
+        .then(data => liveRecv(data))
+        .catch(error => {
+            console.error('Error:', error);
+            unwait();
+        });
+    }
+
+    function liveRecv(data) {
+        console.log("Received data:", data); // Debug log
+        if (data[0]) {
+            add_msg("assistant", data[1]);
+            unwait();
+        } else {
+            console.error("Error receiving data");
+            unwait();
+        }
+    }
+</script>
+
+<style>
+    .not-selectable {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 80vh;
+        max-width: 600px;
+        margin: 0 auto;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .chat-header {
+        padding: 10px;
+        background-color: #f1f1f1;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 10px;
+        overflow-y: auto;
+        background-color: #fff;
+    }
+
+    .chat-input {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #ccc;
+        background-color: #f1f1f1;
+    }
+
+    .chat-input textarea {
+        flex: 1;
+        resize: none;
+    }
+
+    .chat-input button {
+        margin-left: 10px;
+    }
+
+    .msg {
+        margin-bottom: 10px;
+        display: inline-block;
+        padding: 10px;
+        border-radius: 10px;
+        max-width: 100%;
+    }
+
+    .msg.user {
+        background-color: #dcf8c6;
+        align-self: flex-end;
+        text-align: right;
+        margin-left: 30%;
+        float: right;
+    }
+
+    .msg.assistant, .msg.system {
+        background-color: #f1f0f0;
+        align-self: flex-start;
+        margin-right: 30%;
+    }
+
+    .msg .msg-content {
+        margin: 0;
+    }
+
+    #loading {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 50%;
+        top: 50%;
+        width: 80px;
+        height: 80px;
+        margin: -40px 0 0 -40px;
+        border: 16px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 16px solid #3498db;
+        animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .otree-timer__time-left {
+        color: red;
+        font-weight: bold;
+    }
+</style>
+
+{{ endblock }}
